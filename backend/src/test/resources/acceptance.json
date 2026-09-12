@@ -1,0 +1,114 @@
+[
+  {
+    "op": "create",
+    "as": "agreement",
+    "module": "agreements",
+    "data": {
+      "name": "关键系统 P1",
+      "priority": "P1",
+      "responseHours": 1,
+      "resolutionHours": 4
+    }
+  },
+  {
+    "op": "create",
+    "as": "ticket",
+    "module": "tickets",
+    "data": {
+      "agreement": "$agreement.id",
+      "customer": "示例企业",
+      "subject": "核心接口不可用",
+      "openedAt": "$now-6h"
+    }
+  },
+  {
+    "op": "monitor"
+  },
+  {
+    "op": "action",
+    "target": "ticket",
+    "action": "acknowledge"
+  },
+  {
+    "op": "action",
+    "target": "ticket",
+    "action": "resolve"
+  },
+  {
+    "op": "action",
+    "target": "ticket",
+    "action": "close",
+    "role": "reviewer"
+  },
+  {
+    "op": "check",
+    "target": "ticket",
+    "expect": {
+      "state": "CLOSED",
+      "data.responseBreached": true,
+      "data.resolutionBreached": true
+    }
+  },
+  {
+    "op": "count",
+    "module": "breaches",
+    "count": 2
+  },
+  {
+    "op": "count",
+    "module": "escalations",
+    "count": 2
+  },
+  {
+    "op": "create",
+    "as": "ticket2",
+    "module": "tickets",
+    "data": {
+      "agreement": "$agreement.id",
+      "customer": "示例企业",
+      "subject": "普通异常",
+      "openedAt": "$now-10m"
+    }
+  },
+  {
+    "op": "action",
+    "target": "ticket2",
+    "action": "acknowledge"
+  },
+  {
+    "op": "action",
+    "target": "ticket2",
+    "action": "escalate",
+    "role": "admin",
+    "data": {
+      "reason": "客户要求升级关注"
+    }
+  },
+  {
+    "op": "action",
+    "target": "ticket2",
+    "action": "resolve"
+  },
+  {
+    "op": "action",
+    "target": "ticket2",
+    "action": "close",
+    "role": "reviewer"
+  },
+  {
+    "op": "count",
+    "module": "breaches",
+    "count": 2
+  },
+  {
+    "op": "count",
+    "module": "escalations",
+    "count": 3
+  },
+  {
+    "op": "metric",
+    "expect": {
+      "已关闭工单": 2
+    }
+  }
+]
