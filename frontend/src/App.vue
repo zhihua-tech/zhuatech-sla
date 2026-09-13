@@ -7,6 +7,7 @@ const token=ref(sessionStorage.getItem('sla-session')||''),user=ref(null),catalo
 const username=ref(''),password=ref(''),busy=ref(false),error=ref(''),notice=ref('');
 const mode=ref(location.pathname.startsWith('/admin')?'admin':'work'),section=ref('dashboard'),rows=ref([]),total=ref(0),page=ref(1),query=ref(''),state=ref('');
 const selected=ref(null),history=ref([]),attachments=ref([]),dialog=ref(null),options=ref({}),users=ref([]),audit=ref([]);
+const risks=ref([]),riskHours=ref(4);
 const module=computed(()=>catalog.value?.modules.find(m=>m.key===section.value));
 const roleNames={ADMIN:'系统管理员',REVIEWER:'审核人员',OPERATOR:'业务人员',VIEWER:'只读用户'};
 const currentTitle=computed(()=>section.value==='dashboard'?'业务概览':section.value==='users'?'账号与权限':section.value==='audit'?'操作审计':module.value?.label||'工作台');
@@ -25,7 +26,7 @@ async function login(){await guarded(async()=>{const r=await request('/auth/logi
 async function logout(){await guarded(async()=>{await request('/auth/logout',{method:'POST',body:{}});token.value='';user.value=null;sessionStorage.removeItem('sla-session');});}
 async function load(){user.value=await request('/me');catalog.value=await request('/catalog');if(mode.value==='admin'&&user.value.role!=='ADMIN')mode.value='work';section.value=mode.value==='admin'?'users':'dashboard';await refresh();}
 async function refresh(){
- if(section.value==='dashboard'){dashboard.value=await request('/dashboard');return;}
+ if(section.value==='dashboard'){[dashboard.value,risks.value]=await Promise.all([request('/dashboard'),request('/sla/risks?withinHours='+riskHours.value)]);return;}
  if(section.value==='users'){users.value=await request('/admin/users');return;}
  if(section.value==='audit'){audit.value=await request('/admin/audit');return;}
  const r=await request('/records?'+new URLSearchParams({module:section.value,q:query.value,state:state.value,page:String(page.value),size:'20'}));rows.value=r.items;total.value=r.total;for(const field of columns.value)if(field.type==='ref')await loadOptions(field);
@@ -93,6 +94,7 @@ onMounted(async()=>{if(token.value)await guarded(load);});
     <template v-if="section==='dashboard'&&dashboard">
      <div class="metric-strip"><div v-for="(value,key) in dashboard.metrics" :key="key" class="metric"><span>{{key}}</span><strong>{{format(value)}}</strong><small>当前企业业务记录汇总</small></div></div>
      <div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>业务处理概况</h2><span class="muted">点击模块进入业务列表</span></div><button v-for="item in dashboard.modules" :key="item.key" class="module-row" :disabled="busy" @click="navigate(item.key)"><div><strong>{{item.label}}</strong><span>{{item.states.map(s=>format(s.state)+' '+s.total).join(' · ')||'暂无业务记录'}}</span></div><b>{{item.count}}<small>条记录 →</small></b></button></section><section class="panel"><div class="panel-heading"><h2>最近操作</h2><span class="muted">审计留痕</span></div><div class="activity" v-for="(item,i) in dashboard.recent.slice(0,7)" :key="i"><span class="activity-dot"></span><div><strong>{{item.actor}} <span>{{item.action}}</span></strong><p>{{item.remark}}</p><time>{{prettyTime(item.created_at)}}</time></div></div><p v-if="!dashboard.recent.length" class="empty">暂无操作记录</p></section></div>
+     <section class="panel"><div class="panel-heading"><h2>服务时限风险</h2><label>查看未来 <select v-model.number="riskHours" @change="guarded(refresh)"><option :value="4">4 小时</option><option :value="24">24 小时</option><option :value="72">72 小时</option></select></label></div><div class="table-scroll"><table><thead><tr><th>工单</th><th>待完成节点</th><th>截止时间</th><th>剩余分钟</th><th>风险</th></tr></thead><tbody><tr v-for="item in risks" :key="item.ticket"><td>{{item.code}}</td><td>{{item.kind==='RESPONSE'?'首次响应':'问题解决'}}</td><td>{{prettyTime(item.dueAt)}}</td><td>{{item.minutesRemaining}}</td><td>{{item.risk==='OVERDUE'?'已超时':'即将到期'}}</td></tr></tbody></table><p v-if="!risks.length" class="empty">当前窗口内没有临期或超时工单。</p></div></section>
      <div class="info-band"><strong>操作提示</strong><span>先维护基础资料，再发起业务单据。审批必须由另一位审核人员完成；自动流水仅供查阅，不能手动改写。</span></div>
     </template>
     <section v-else-if="module" class="panel">
