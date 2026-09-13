@@ -40,5 +40,16 @@ import static cn.zhuatech.sla.Engine.*;
   }
   return null;
  }
+ public List<Map<String,Object>> riskQueue(Engine e,User u,int withinHours){
+  if(withinHours<1||withinHours>168)throw new Failure(400,"临期窗口必须在 1 至 168 小时之间");
+  Instant now=Instant.now(),horizon=now.plus(Duration.ofHours(withinHours));List<Map<String,Object>> risks=new ArrayList<>();
+  for(Row ticket:e.all(u,"tickets")){
+   if(Set.of("RESOLVED","CLOSED").contains(ticket.state()))continue;
+   boolean response=!ticket.data().containsKey("respondedAt");String kind=response?"RESPONSE":"RESOLUTION";
+   Instant due=instant(ticket.data(),response?"responseDue":"resolutionDue");if(due.isAfter(horizon))continue;
+   Map<String,Object> item=new LinkedHashMap<>();item.put("ticket",ticket.id());item.put("code",ticket.code());item.put("state",ticket.state());item.put("kind",kind);item.put("dueAt",due.toString());item.put("minutesRemaining",Duration.between(now,due).toMinutes());item.put("risk",due.isBefore(now)?"OVERDUE":"AT_RISK");risks.add(item);
+  }
+  risks.sort(Comparator.comparing(x->Instant.parse(x.get("dueAt").toString())));return risks;
+ }
  public Map<String,Object> metrics(Engine e,User u){return Map.of("待响应工单",e.all(u,"tickets").stream().filter(r->r.state().equals("OPEN")).count(),"超时事件",e.all(u,"breaches").size(),"已关闭工单",e.all(u,"tickets").stream().filter(r->r.state().equals("CLOSED")).count());}
 }

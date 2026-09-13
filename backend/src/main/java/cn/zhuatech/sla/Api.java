@@ -26,6 +26,7 @@ public class Api {
  @GetMapping("/me") User me(@RequestHeader(value="Authorization",required=false) String h){return user(h);}
  @GetMapping("/catalog") Object catalog(@RequestHeader(value="Authorization",required=false) String h){user(h);return e.spec();}
  @GetMapping("/dashboard") Object dashboard(@RequestHeader(value="Authorization",required=false) String h){return e.dashboard(user(h));}
+ @GetMapping("/sla/risks") Object risks(@RequestHeader(value="Authorization",required=false) String h,@RequestParam(defaultValue="4") int withinHours){return e.risks(user(h),withinHours);}
  @GetMapping("/records") Page records(@RequestHeader(value="Authorization",required=false) String h,@RequestParam String module,@RequestParam(defaultValue="") String q,@RequestParam(defaultValue="") String state,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size){return e.page(user(h),module,q,state,page,size);}
  @GetMapping("/records/{id}") Row record(@RequestHeader(value="Authorization",required=false) String h,@PathVariable String id){return e.get(user(h),id);}
  @PostMapping("/records/{module}") Object create(@RequestHeader(value="Authorization",required=false) String h,@RequestHeader(value="Idempotency-Key",required=false) String key,@PathVariable String module,@RequestBody Command c){

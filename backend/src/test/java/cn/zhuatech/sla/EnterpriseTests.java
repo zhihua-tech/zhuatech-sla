@@ -183,4 +183,20 @@ class EnterpriseTests {
   assertEquals(List.of("ORDER-FIRST","ORDER-SECOND"),ordered);
  }
 
+ @SuppressWarnings("unchecked") @Test @Order(14) void riskQueueIsReadOnlyAndTenantScoped()throws Exception{
+  String agreement=ids.get("agreement");
+  String overdue=((Map<String,Object>)call("POST","/records/tickets",Map.of("code","SLA-RISK-OVERDUE","data",Map.of("agreement",agreement,"customer","风险客户","subject","未响应超时","openedAt",Instant.now().minus(Duration.ofHours(2)).toString())),"operator").body().get("record")).get("id").toString();
+  String pending=((Map<String,Object>)call("POST","/records/tickets",Map.of("code","SLA-RISK-PENDING","data",Map.of("agreement",agreement,"customer","风险客户","subject","待响应临期","openedAt",Instant.now().minus(Duration.ofMinutes(10)).toString())),"operator").body().get("record")).get("id").toString();
+  long audits=db.queryForObject("SELECT COUNT(*) FROM audit_event",Long.class);
+  Result result=call("GET","/sla/risks?withinHours=2",null,"viewer");assertEquals(200,result.status(),result.body().toString());
+  List<Map<String,Object>> list=(List<Map<String,Object>>)result.body().get("items");
+  assertTrue(list.stream().anyMatch(x->x.get("ticket").equals(overdue)&&x.get("risk").equals("OVERDUE")&&x.get("kind").equals("RESPONSE")));
+  assertTrue(list.stream().anyMatch(x->x.get("ticket").equals(pending)&&x.get("risk").equals("AT_RISK")&&x.get("kind").equals("RESPONSE")));
+  assertEquals(audits,db.queryForObject("SELECT COUNT(*) FROM audit_event",Long.class));
+  assertEquals(400,call("GET","/sla/risks?withinHours=0",null,"viewer").status());
+  assertEquals(400,call("GET","/sla/risks?withinHours=169",null,"viewer").status());
+  String foreign=call("POST","/auth/login",Map.of("username","foreign-http-user","password","Test-Foreign-2026!"),null).body().get("token").toString();
+  assertTrue(((List<?>)call("GET","/sla/risks?withinHours=2",null,foreign).body().get("items")).isEmpty());
+ }
+
 }
