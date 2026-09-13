@@ -34,6 +34,16 @@
     "target": "ticket",
     "action": "resolve"
   },
+  {"op":"action","target":"ticket","action":"close","role":"reviewer","error":409},
+  {"op":"find","as":"response_escalation","module":"escalations","where":{"data.ticket":"$ticket.id","data.reason":"RESPONSE 时限超时"}},
+  {"op":"find","as":"resolution_escalation","module":"escalations","where":{"data.ticket":"$ticket.id","data.reason":"RESOLUTION 时限超时"}},
+  {"op":"action","target":"response_escalation","action":"acknowledge","role":"admin","data":{"assignee":"unknown-user","response":"排查响应超时"},"error":409},
+  {"op":"action","target":"response_escalation","action":"acknowledge","role":"admin","data":{"assignee":"viewer","response":"排查响应超时"},"error":409},
+  {"op":"action","target":"response_escalation","action":"acknowledge","role":"admin","data":{"assignee":"operator","response":"排查响应超时并告知客户"}},
+  {"op":"action","target":"response_escalation","action":"close","role":"admin","data":{"resolution":"已恢复并通知"},"error":409},
+  {"op":"action","target":"response_escalation","action":"close","role":"reviewer","data":{"resolution":"已核对客户通知与响应记录"}},
+  {"op":"action","target":"resolution_escalation","action":"acknowledge","role":"admin","data":{"assignee":"operator","response":"核对解决时限"}},
+  {"op":"action","target":"resolution_escalation","action":"close","role":"reviewer","data":{"resolution":"解决方案已复核"}},
   {
     "op": "action",
     "target": "ticket",
@@ -89,6 +99,10 @@
     "target": "ticket2",
     "action": "resolve"
   },
+  {"op":"find","as":"manual_escalation","module":"escalations","where":{"data.ticket":"$ticket2.id","data.reason":"客户要求升级关注"}},
+  {"op":"action","target":"ticket2","action":"close","role":"reviewer","error":409},
+  {"op":"action","target":"manual_escalation","action":"acknowledge","role":"admin","data":{"assignee":"operator","response":"加急跟踪客户诉求"}},
+  {"op":"action","target":"manual_escalation","action":"close","role":"reviewer","data":{"resolution":"已确认客户恢复正常使用"}},
   {
     "op": "action",
     "target": "ticket2",
@@ -108,7 +122,8 @@
   {
     "op": "metric",
     "expect": {
-      "已关闭工单": 2
+      "已关闭工单": 2,
+      "未处置升级": 0
     }
   }
 ]

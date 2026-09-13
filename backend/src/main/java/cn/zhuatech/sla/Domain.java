@@ -36,7 +36,17 @@ import static cn.zhuatech.sla.Engine.*;
    case "tickets.escalate" -> {require(d.containsKey("respondedAt"),"请先确认响应再升级");e.ledger(u,"escalations","OPEN",Map.of("ticket",r.id(),"reason",txt(i,"reason"),"occurredAt",now.toString()));d.put("escalationReason",txt(i,"reason"));}
    case "tickets.resolve" -> {require(d.containsKey("respondedAt"),"尚未响应");d.put("resolvedAt",now.toString());if(now.isAfter(instant(d,"resolutionDue")))breach(e,u,r,d,"RESOLUTION");}
    case "tickets.reopen" -> {Row agreement=e.ref(u,d,"agreement","agreements");d.put("openedAt",now.toString());d.put("responseDue",now.plus(Duration.ofHours(num(agreement.data(),"responseHours").longValueExact())).toString());d.put("resolutionDue",now.plus(Duration.ofHours(num(agreement.data(),"resolutionHours").longValueExact())).toString());d.remove("respondedAt");d.remove("resolvedAt");d.put("responseBreached",false);d.put("resolutionBreached",false);d.put("reopenCount",((Number)d.getOrDefault("reopenCount",0)).intValue()+1);}
-   case "tickets.close" -> {require(d.containsKey("resolvedAt"),"未解决不能关闭");d.put("closedAt",now.toString());}
+   case "tickets.close" -> {require(d.containsKey("resolvedAt"),"未解决不能关闭");require(linked(e,u,"escalations","ticket",r.id()).stream().allMatch(x->x.state().equals("CLOSED")),"仍有未完成处置的升级事件");d.put("closedAt",now.toString());}
+   case "escalations.acknowledge" -> {
+    Row ticket=e.ref(u,d,"ticket","tickets");require(!ticket.state().equals("CLOSED"),"工单已关闭，不能再分派升级事件");
+    require(e.jdbc().queryForObject("SELECT COUNT(*) FROM app_user WHERE tenant=? AND username=? AND active=true AND role<>'VIEWER'",Integer.class,u.tenant(),txt(i,"assignee"))==1,"升级负责人必须是当前企业的有效业务账号");
+    d.put("assignee",txt(i,"assignee"));d.put("response",txt(i,"response"));d.put("acknowledgedBy",u.username());d.put("acknowledgedAt",now.toString());
+   }
+   case "escalations.close" -> {
+    Row ticket=e.ref(u,d,"ticket","tickets");require(ticket.state().equals("RESOLVED"),"工单解决后才能关闭升级事件");
+    require(!u.username().equals(txt(d,"acknowledgedBy")),"升级分派人与关闭复核人必须分离");
+    d.put("resolution",txt(i,"resolution"));d.put("closedBy",u.username());d.put("closedAt",now.toString());
+   }
   }
   return null;
  }
@@ -51,5 +61,5 @@ import static cn.zhuatech.sla.Engine.*;
   }
   risks.sort(Comparator.comparing(x->Instant.parse(x.get("dueAt").toString())));return risks;
  }
- public Map<String,Object> metrics(Engine e,User u){return Map.of("待响应工单",e.all(u,"tickets").stream().filter(r->r.state().equals("OPEN")).count(),"超时事件",e.all(u,"breaches").size(),"已关闭工单",e.all(u,"tickets").stream().filter(r->r.state().equals("CLOSED")).count());}
+ public Map<String,Object> metrics(Engine e,User u){return Map.of("待响应工单",e.all(u,"tickets").stream().filter(r->r.state().equals("OPEN")).count(),"超时事件",e.all(u,"breaches").size(),"未处置升级",e.all(u,"escalations").stream().filter(r->!r.state().equals("CLOSED")).count(),"已关闭工单",e.all(u,"tickets").stream().filter(r->r.state().equals("CLOSED")).count());}
 }
