@@ -5,11 +5,29 @@ import java.util.*;
 import java.time.*;
 import static cn.zhuatech.sla.Model.*;
 import static cn.zhuatech.sla.Engine.*;
+/**
+ * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+ */
 @Component public class Domain {
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  static String text(Row r,String k){return txt(r.data(),k);}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  static Instant instant(Map<String,Object>d,String key){try{return Instant.parse(txt(d,key));}catch(Exception ex){throw new Failure(400,"时间须为 UTC ISO-8601 格式: "+key);}}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  static List<Row> linked(Engine e,User u,String module,String field,String id){return e.all(u,module).stream().filter(x->text(x,field).equals(id)).toList();}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  void validateAgreement(Map<String,Object>d){require(num(d,"responseHours").compareTo(num(d,"resolutionHours"))<=0,"响应时限不能大于解决时限");}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public void create(Engine e,User u,String module,Map<String,Object>d){
   if(module.equals("agreements")){validateAgreement(d);require(e.all(u,module).stream().noneMatch(x->text(x,"name").equalsIgnoreCase(txt(d,"name"))),"协议名称重复");}
   if(module.equals("tickets")){
@@ -20,15 +38,24 @@ import static cn.zhuatech.sla.Engine.*;
    d.put("responseBreached",false);d.put("resolutionBreached",false);
   }
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public void edit(Engine e,User u,Row r,Map<String,Object>d){
   if(r.module().equals("agreements")){require(linked(e,u,"tickets","agreement",r.id()).isEmpty(),"协议已有工单，不能改写服务承诺");validateAgreement(d);}
   if(r.module().equals("tickets")){require(txt(d,"agreement").equals(text(r,"agreement"))&&txt(d,"openedAt").equals(text(r,"openedAt")),"不能修改已受理工单的协议或计时起点");r.data().forEach((k,v)->{if(!d.containsKey(k))d.put(k,v);});}
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  void breach(Engine e,User u,Row r,Map<String,Object>d,String kind){
   String flag=kind.equals("RESPONSE")?"responseBreached":"resolutionBreached";if(Boolean.TRUE.equals(d.get(flag)))return;
   d.put(flag,true);e.ledger(u,"breaches","OPEN",Map.of("ticket",r.id(),"kind",kind,"occurredAt",Instant.now().toString()));
   e.ledger(u,"escalations","OPEN",Map.of("ticket",r.id(),"reason",kind+" 时限超时","occurredAt",Instant.now().toString()));
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public String action(Engine e,User u,Row r,String action,Map<String,Object>i,Map<String,Object>d){
   Instant now=Instant.now();
   switch(r.module()+"."+action){
@@ -50,6 +77,9 @@ import static cn.zhuatech.sla.Engine.*;
   }
   return null;
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public List<Map<String,Object>> riskQueue(Engine e,User u,int withinHours){
   if(withinHours<1||withinHours>168)throw new Failure(400,"临期窗口必须在 1 至 168 小时之间");
   Instant now=Instant.now(),horizon=now.plus(Duration.ofHours(withinHours));List<Map<String,Object>> risks=new ArrayList<>();
@@ -61,5 +91,8 @@ import static cn.zhuatech.sla.Engine.*;
   }
   risks.sort(Comparator.comparing(x->Instant.parse(x.get("dueAt").toString())));return risks;
  }
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public Map<String,Object> metrics(Engine e,User u){return Map.of("待响应工单",e.all(u,"tickets").stream().filter(r->r.state().equals("OPEN")).count(),"超时事件",e.all(u,"breaches").size(),"未处置升级",e.all(u,"escalations").stream().filter(r->!r.state().equals("CLOSED")).count(),"已关闭工单",e.all(u,"tickets").stream().filter(r->r.state().equals("CLOSED")).count());}
 }

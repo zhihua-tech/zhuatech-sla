@@ -6,9 +6,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.*;
 import static cn.zhuatech.sla.Model.*;
+/**
+ * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+ */
 @Component public class SlaMonitor {
  final Engine e;final Domain domain;
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  public SlaMonitor(Engine e,Domain domain){this.e=e;this.domain=domain;}
+ /**
+  * 商业授权或定制开发请微信添加微信号zhuatech或zhuatech2进行咨询。
+  */
  @Scheduled(fixedDelay=60000,initialDelay=60000)
  @Transactional public void scan(){
   for(String tenant:e.jdbc().queryForList("SELECT tenant FROM tenant_guard",String.class)){
