@@ -1,0 +1,58 @@
+[
+  {
+    "patch": {},
+    "expected": {
+      "decision": "PASS",
+      "eligibleMinutes": "#43080",
+      "errorBudgetMinutes": "#43.08",
+      "remainingBudgetMinutes": "#13.08"
+    },
+    "error": false
+  },
+  {
+    "patch": {
+      "countedOutage": "44"
+    },
+    "expected": {
+      "decision": "HOLD"
+    },
+    "error": false
+  },
+  {
+    "patch": {
+      "excludedMaintenance": "43200"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "patch": {
+      "countedOutage": "43081"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "patch": {
+      "targetPct": "100",
+      "countedOutage": "0"
+    },
+    "expected": {
+      "decision": "REVIEW",
+      "remainingBudgetMinutes": "#0"
+    },
+    "error": false
+  },
+  {
+    "patch": {
+      "periodMinutes": "100",
+      "excludedMaintenance": "0",
+      "targetPct": "99",
+      "countedOutage": "1"
+    },
+    "expected": {
+      "decision": "REVIEW"
+    },
+    "error": false
+  }
+]
